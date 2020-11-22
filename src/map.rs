@@ -12,6 +12,7 @@ pub struct Map {
 }
 
 impl Map {
+    /// Returns incidence matrix of cities with random distances
     pub fn new(size: usize, rng: &mut ThreadRng) -> Self {
         let mut matrix = vec![vec![0; size]; size];
 
@@ -31,10 +32,12 @@ impl Map {
         }
     }
 
+    /// Returns distance between 2 cities
     pub fn get_distance(&self, a: usize, b: usize) -> usize {
         self.matrix[a][b]
     }
 
+    /// Returns sum length of a given path starting with city 0
     pub fn get_path_length(&self, path: &Path) -> PathLen {
         path.iter()
             .zip(path.iter().skip(1))
@@ -43,6 +46,7 @@ impl Map {
             })
     }
 
+    /// Returns random sequence of cities excluding city 0 (it is considered the starting point)
     pub fn get_random_path(&self, rng: &mut ThreadRng) -> Path {
         let mut path: Path = (1..self.city_count).collect();
         path.shuffle(rng);

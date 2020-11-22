@@ -1,7 +1,7 @@
 use rand::prelude::*;
 use std::fmt;
 
-const K: usize = 100;
+const K: usize = 5;
 
 pub type Path = Vec<usize>;
 pub type PathLen = usize;

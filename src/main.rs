@@ -6,8 +6,8 @@ use rand::distributions::WeightedIndex;
 use rand::prelude::*;
 use std::io;
 
-const MAX_GENERATIONS: usize = 30;
-const POPULATION_SIZE: usize = 100;
+const MAX_GENERATIONS: usize = 1000;
+const POPULATION_SIZE: usize = 5000;
 
 fn one_point_crossover(p1: &Path, p2: &Path, i: usize) -> Path {
     let (genes1, genes2) = p1.split_at(i);
@@ -33,6 +33,17 @@ fn mutate(path: &Path, rng: &mut ThreadRng) -> Path {
     mutated
 }
 
+fn get_best_path(population: &Vec<Path>, fitness: &Vec<f64>) -> Path {
+    let best_index = fitness
+        .iter()
+        .enumerate()
+        .max_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap())
+        .unwrap()
+        .0;
+
+    population.get(best_index).unwrap().clone()
+}
+
 fn main() -> io::Result<()> {
     let mut buffer = String::new();
     io::stdin().read_line(&mut buffer)?;
@@ -42,8 +53,6 @@ fn main() -> io::Result<()> {
 
     let map = Map::new(size, &mut rng);
 
-    println!("Distances:\n\n{}", map);
-
     let mut population: Vec<Path> = (0..POPULATION_SIZE)
         .map(|_| map.get_random_path(&mut rng))
         .collect();
@@ -52,22 +61,21 @@ fn main() -> io::Result<()> {
         .map(|path| 1_f64 / map.get_path_length(path) as f64)
         .collect();
 
-    for _ in 0..MAX_GENERATIONS {
-        let dist = WeightedIndex::new(&fitness).unwrap();
-        // let index = dist.sample(&mut rng);
-
-        // let alpha_male = population.get(index).unwrap();
-        let index = fitness
+    for gen in 0..MAX_GENERATIONS {
+        let alpha_index = fitness
             .iter()
             .enumerate()
             .max_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap())
             .unwrap()
             .0;
-        let alpha_male = population.get(index).unwrap();
+        let alpha_male = population.get(alpha_index).unwrap();
+
+        let dist = WeightedIndex::new(&fitness).unwrap();
         let other_indices: Vec<usize> = dist
             .sample_iter(&mut rng)
             .take(POPULATION_SIZE / 2)
             .collect();
+
         let crossover_point = rng.gen_range(0, size - 1);
 
         let children = other_indices
@@ -76,10 +84,6 @@ fn main() -> io::Result<()> {
             .flatten()
             .map(|child| mutate(&child, &mut rng))
             .collect::<Vec<Path>>();
-        // let children = population
-        //     .iter()
-        //     .map(|child| mutate(&child, &mut rng))
-        //     .collect();
 
         population = children;
         fitness = population
@@ -87,22 +91,18 @@ fn main() -> io::Result<()> {
             .map(|path| 1_f64 / map.get_path_length(path) as f64)
             .collect();
 
-        // println!("{:?}", fitness);
-
-        let best_index = fitness
-            .iter()
-            .enumerate()
-            .max_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap())
-            .unwrap()
-            .0;
-        let best_path = population.get(best_index).unwrap();
-
-        println!(
-            "Current best: {:?} {}",
-            best_path,
-            map.get_path_length(best_path)
-        );
+        if gen == 10 || gen == 30 || gen == 100 || gen == 500 {
+            let current_best_path = get_best_path(&population, &fitness);
+            println!(
+                "{}th generation best: {}",
+                gen,
+                map.get_path_length(&current_best_path)
+            );
+        }
     }
+
+    let best_path = get_best_path(&population, &fitness);
+    println!("Final best: {}", map.get_path_length(&best_path));
 
     Ok(())
 }

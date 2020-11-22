@@ -1,13 +1,13 @@
 #[warn(clippy::all)]
+mod cli;
 mod map;
 
+use cli::Cli;
 use map::*;
 use rand::distributions::WeightedIndex;
 use rand::prelude::*;
 use std::io;
-
-const MAX_GENERATIONS: usize = 1000;
-const POPULATION_SIZE: usize = 5000;
+use structopt::StructOpt;
 
 fn one_point_crossover(p1: &Path, p2: &Path, i: usize) -> Path {
     let (genes1, genes2) = p1.split_at(i);
@@ -45,15 +45,18 @@ fn get_best_path(population: &Vec<Path>, fitness: &Vec<f64>) -> Path {
 }
 
 fn main() -> io::Result<()> {
-    let mut buffer = String::new();
-    io::stdin().read_line(&mut buffer)?;
-    let size = buffer.trim_end().parse::<usize>().expect("Invalid input");
+    let args = Cli::from_args();
+    let Cli {
+        cities,
+        generations,
+        population: population_size,
+    } = args;
 
     let mut rng = thread_rng();
 
-    let map = Map::new(size, &mut rng);
+    let map = Map::new(cities, &mut rng);
 
-    let mut population: Vec<Path> = (0..POPULATION_SIZE)
+    let mut population: Vec<Path> = (0..population_size)
         .map(|_| map.get_random_path(&mut rng))
         .collect();
     let mut fitness: Vec<f64> = population
@@ -61,7 +64,7 @@ fn main() -> io::Result<()> {
         .map(|path| 1_f64 / map.get_path_length(path) as f64)
         .collect();
 
-    for gen in 0..MAX_GENERATIONS {
+    for gen in 0..generations {
         let alpha_index = fitness
             .iter()
             .enumerate()
@@ -73,10 +76,10 @@ fn main() -> io::Result<()> {
         let dist = WeightedIndex::new(&fitness).unwrap();
         let other_indices: Vec<usize> = dist
             .sample_iter(&mut rng)
-            .take(POPULATION_SIZE / 2)
+            .take(population_size / 2)
             .collect();
 
-        let crossover_point = rng.gen_range(0, size - 1);
+        let crossover_point = rng.gen_range(0, cities - 1);
 
         let children = other_indices
             .iter()
